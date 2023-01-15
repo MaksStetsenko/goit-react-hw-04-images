@@ -104,7 +104,7 @@ export const App = () => {
     }
 
     getImages(query, page);
-  }, [getImages]);
+  }, [query, page]);
 
   useEffect(() => {
     if (!error) {
