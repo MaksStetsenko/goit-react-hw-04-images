@@ -1,4 +1,4 @@
-import React, { PureComponent } from 'react';
+import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -21,61 +21,62 @@ import Button from '../Button';
 import GlobalStyle from '../GlobalStyle';
 import AppStyled from './App.styled';
 
-export class App extends PureComponent {
-  static propTypes = {
-    searchString: PropTypes.string,
+export const App = () => {
+  const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [searchData, setSearchData] = useState([]);
+  const [firstImgUrlInFetch, setFirstImgUrlInFetch] = useState('');
+  const [status, setStatus] = useState(mashineStatus.IDLE);
+  const [loadMoreBtnVisibility, setLoadMoreBtnVisibility] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSerch = ({ searchQuery }) => {
+    if (query !== searchQuery) {
+      setPage(1);
+      setSearchData([]);
+    }
+
+    setQuery(searchQuery);
   };
 
-  state = {
-    query: '',
-    page: 1,
-    searchData: [],
-    firstImgUrlInFetch: '',
-    status: mashineStatus.IDLE,
-  };
-
-  handleSerch = ({ query }) => {
-    this.setState({ query, page: 1 });
-  };
-
-  scrollNextPage = () => {
+  const scrollNextPage = () => {
     setTimeout(() => {
-      window.scroll(
-        {
-          behavior: 'smooth',
-          top: document.documentElement.scrollHeight,
-        }
-      )
-    },
-        GALLERY_SCROLL_TIMEOUT);
+      window.scroll({
+        behavior: 'smooth',
+        top: document.documentElement.scrollHeight,
+      });
+    }, GALLERY_SCROLL_TIMEOUT);
   };
 
-  getImages = async () => {
-    const { page, query } = this.state;
+  const nextPage = () => {
+    setPage(page + 1);
 
-    this.setState({
-      status: mashineStatus.LOADING,
-    });
+    scrollNextPage();
+  };
+
+  const getImages = async () => {
+    setStatus(mashineStatus.LOADING);
 
     try {
+      // ============== For list ===============
       const data = await fetchData(query, page);
       const hits = await data.hits;
+      const imagesPerPage = ApiOptions.per_page;
+
+      // ============== For toasts =============
       const imagesInFetch = hits.length;
-      
-      //==========toast when nothing found=====================
+      const totalImages = data.totalHits;
+      const url = hits[0].webformatURL;
+
+      //==========toast when nothing found======================
       if (!imagesInFetch) {
         toast.info(`No images found!`);
-        this.setState({
-          status: mashineStatus.SUCCESSFULLY,
-          loadMoreBtnVisibility: false,
-        });
+        setStatus(mashineStatus.SUCCESSFULLY);
+        setLoadMoreBtnVisibility(false);
         return;
       }
       //========================================================
-      // ====================== Toast.info =====================
-      const imagesPerPage = ApiOptions.per_page;
-      const totalImages = data.totalHits;
-
+      // ====================== Toast total found message ======
       const imagesLeft =
         imagesInFetch === imagesPerPage
           ? totalImages - imagesPerPage * page
@@ -83,63 +84,65 @@ export class App extends PureComponent {
 
       toast.info(`Total found: ${totalImages}. Images left: ${imagesLeft}.`);
       //==========================================================
-      const { searchData } = this.state;
-      const url = await hits[0].webformatURL;
-      
-        this.setState({
-          searchData: [...searchData, ...hits],
-          firstImgUrlInFetch: url,
-          status: mashineStatus.SUCCESSFULLY,
-          loadMoreBtnVisibility: imagesInFetch >= imagesPerPage ? true : false,
-          page: this.state.page + 1,
-        });this.scrollNextPage()
+      //=================== Rendering ============================
+      setSearchData(searchData => [...searchData, ...hits]);
+      setFirstImgUrlInFetch(url);
+      setStatus(mashineStatus.SUCCESSFULLY);
+      setLoadMoreBtnVisibility(imagesInFetch >= imagesPerPage ? true : false);
     } catch ({ code, message }) {
-      // =============== Toast when have error =================
+      // =============== Toast when have error ===================
       toast.error(`${code}: ${message}`);
-      this.setState({
-        status: mashineStatus.SUCCESSFULLY,
-        error: `${code}: ${message}`,
-      });
-      //==========================================================
+
+      setError(`${code}: ${message}`);
+      setStatus(mashineStatus.SUCCESSFULLY);
     }
   };
 
-  componentDidUpdate(_, prevState) {
-    const { query: currentSearch } = this.state;
-    const prevSearch = prevState.query;
-
-    if (prevSearch !== currentSearch) {
-      this.setState({
-        searchData: [],
-        status: mashineStatus.IDLE,
-      });
-      this.getImages();
+  useEffect(() => {
+    if (!query) {
+      return;
     }
-  }
 
-  render() {
-    const { status, searchData, loadMoreBtnVisibility } = this.state;
+    getImages(query, page);
+  }, [query, page]);
 
-    return (
-      <>
-        <GlobalStyle />
-        <AppStyled>
-          <Searchbar onSubmit={this.handleSerch} />
+  useEffect(() => {
+    if (!error) {
+      return;
+    }
 
-          {status === mashineStatus.IDLE && (
-            <IdleScreen>{message.IDLE}</IdleScreen>
-          )}
+    console.log('error :>> ', error);
+  }, [error]);
 
-          {status === mashineStatus.LOADING && <Loader />}
+  useEffect(() => {
+    if (!firstImgUrlInFetch) {
+      return;
+    }
+  }, [firstImgUrlInFetch]);
 
-          <ImageGallery searchData={searchData} />
+  return (
+    <>
+      <GlobalStyle />
+      <AppStyled>
+        <Searchbar onSubmit={handleSerch} />
 
-          {status === mashineStatus.SUCCESSFULLY && loadMoreBtnVisibility && (
-            <Button onClick={this.getImages} />
-          )}
-          <ToastContainer />
-        </AppStyled>
-      </>
-    );
-  }
-}
+        {status === mashineStatus.IDLE && (
+          <IdleScreen>{message.IDLE}</IdleScreen>
+        )}
+
+        {status === mashineStatus.LOADING && <Loader />}
+
+        <ImageGallery searchData={searchData} />
+
+        {status === mashineStatus.SUCCESSFULLY && loadMoreBtnVisibility && (
+          <Button onClick={nextPage} />
+        )}
+        <ToastContainer />
+      </AppStyled>
+    </>
+  );
+};
+
+App.propTypes = {
+  searchString: PropTypes.string,
+};
