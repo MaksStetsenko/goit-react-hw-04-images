@@ -25,10 +25,11 @@ export const App = () => {
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
   const [searchData, setSearchData] = useState([]);
-  const [firstImgUrlInFetch, setFirstImgUrlInFetch] = useState('');
   const [status, setStatus] = useState(mashineStatus.IDLE);
   const [loadMoreBtnVisibility, setLoadMoreBtnVisibility] = useState(false);
   const [error, setError] = useState('');
+
+  // ========== Functions ======================
 
   const handleSerch = ({ searchQuery }) => {
     if (query !== searchQuery) {
@@ -58,17 +59,15 @@ export const App = () => {
     setStatus(mashineStatus.LOADING);
 
     try {
-      // ============== For list ===============
+      // ============== For render =============
       const data = await fetchData(query, page);
       const hits = await data.hits;
       const imagesPerPage = ApiOptions.per_page;
-
       // ============== For toasts =============
       const imagesInFetch = hits.length;
       const totalImages = data.totalHits;
-      const url = hits[0].webformatURL;
 
-      //==========toast when nothing found======================
+      //============== Toast when nothing found ================
       if (!imagesInFetch) {
         toast.info(`No images found!`);
         setStatus(mashineStatus.SUCCESSFULLY);
@@ -76,7 +75,7 @@ export const App = () => {
         return;
       }
       //========================================================
-      // ====================== Toast total found message ======
+      // ============== Toast total found message ==============
       const imagesLeft =
         imagesInFetch === imagesPerPage
           ? totalImages - imagesPerPage * page
@@ -86,7 +85,6 @@ export const App = () => {
       //==========================================================
       //=================== Rendering ============================
       setSearchData(searchData => [...searchData, ...hits]);
-      setFirstImgUrlInFetch(url);
       setStatus(mashineStatus.SUCCESSFULLY);
       setLoadMoreBtnVisibility(imagesInFetch >= imagesPerPage ? true : false);
     } catch ({ code, message }) {
@@ -98,11 +96,13 @@ export const App = () => {
     }
   };
 
+  // ================================================================
+  // ============ Effects ===========================================
+
   useEffect(() => {
     if (!query) {
       return;
     }
-
     getImages(query, page);
   }, [query, page]);
 
@@ -110,15 +110,11 @@ export const App = () => {
     if (!error) {
       return;
     }
-
-    console.log('error :>> ', error);
+    console.log('Error : ', error);
   }, [error]);
 
-  useEffect(() => {
-    if (!firstImgUrlInFetch) {
-      return;
-    }
-  }, [firstImgUrlInFetch]);
+  // =================================================================
+  // ========== Render ===============================================
 
   return (
     <>
@@ -142,6 +138,8 @@ export const App = () => {
     </>
   );
 };
+
+// =========== Props ============================================
 
 App.propTypes = {
   searchString: PropTypes.string,
