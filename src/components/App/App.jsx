@@ -55,47 +55,6 @@ export const App = () => {
     scrollNextPage();
   };
 
-  const getImages = async () => {
-    setStatus(mashineStatus.LOADING);
-
-    try {
-      // ============== For render =============
-      const data = await fetchData(query, page);
-      const hits = await data.hits;
-      const imagesPerPage = ApiOptions.per_page;
-      // ============== For toasts =============
-      const imagesInFetch = hits.length;
-      const totalImages = data.totalHits;
-
-      //============== Toast when nothing found ================
-      if (!imagesInFetch) {
-        toast.info(`No images found!`);
-        setStatus(mashineStatus.SUCCESSFULLY);
-        setLoadMoreBtnVisibility(false);
-        return;
-      }
-      //========================================================
-      // ============== Toast total found message ==============
-      const imagesLeft =
-        imagesInFetch === imagesPerPage
-          ? totalImages - imagesPerPage * page
-          : 0;
-
-      toast.info(`Total found: ${totalImages}. Images left: ${imagesLeft}.`);
-      //==========================================================
-      //=================== Rendering ============================
-      setSearchData(searchData => [...searchData, ...hits]);
-      setStatus(mashineStatus.SUCCESSFULLY);
-      setLoadMoreBtnVisibility(imagesInFetch >= imagesPerPage ? true : false);
-    } catch ({ code, message }) {
-      // =============== Toast when have error ===================
-      toast.error(`${code}: ${message}`);
-
-      setError(`${code}: ${message}`);
-      setStatus(mashineStatus.SUCCESSFULLY);
-    }
-  };
-
   // ================================================================
   // ============ Effects ===========================================
 
@@ -103,8 +62,50 @@ export const App = () => {
     if (!query) {
       return;
     }
-    getImages(query, page);
-  }, [query, page]);
+
+    const getImages = async  () => {
+      setStatus(mashineStatus.LOADING);
+  
+      try {
+        // ============== For render =============
+        const data = await fetchData(query, page);
+        const hits = await data.hits;
+        const imagesPerPage = ApiOptions.per_page;
+        // ============== For toasts =============
+        const imagesInFetch = hits.length;
+        const totalImages = data.totalHits;
+  
+        //============== Toast when nothing found ================
+        if (!imagesInFetch) {
+          toast.info(`No images found!`);
+          setStatus(mashineStatus.SUCCESSFULLY);
+          setLoadMoreBtnVisibility(false);
+          return;
+        }
+        //========================================================
+        // ============== Toast total found message ==============
+        const imagesLeft =
+          imagesInFetch === imagesPerPage
+            ? totalImages - imagesPerPage * page
+            : 0;
+  
+        toast.info(`Total found: ${totalImages}. Images left: ${imagesLeft}.`);
+        //==========================================================
+        //=================== Rendering ============================
+        setSearchData(searchData => [...searchData, ...hits]);
+        setStatus(mashineStatus.SUCCESSFULLY);
+        setLoadMoreBtnVisibility(imagesInFetch >= imagesPerPage ? true : false);
+      } catch ({ code, message }) {
+        // =============== Toast when have error ===================
+        toast.error(`${code}: ${message}`);
+  
+        setError(`${code}: ${message}`);
+        setStatus(mashineStatus.SUCCESSFULLY);
+      }
+    }; getImages ()
+  }, [page, query]);
+
+  //========= Console on Error =======================================
 
   useEffect(() => {
     if (!error) {
